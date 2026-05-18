@@ -12,23 +12,29 @@ async function compile() {
         line = line.trim();
         if (!line || line.startsWith('!')) continue;
 
-        if (line.startsWith('||') && line.endsWith('^') && !line.includes('*') && !line.includes('/')) {
-            domains.add(line.slice(2, -1));
+        // FIX: Powerful Regex to capture domains with or without uBO modifiers ($3p, etc.)
+        if (line.startsWith('||')) {
+            const match = line.match(/^\|\|([a-z0-9.-]+)[\^/$]/i);
+            if (match && match[1] && !match[1].includes('*')) {
+                domains.add(match[1].toLowerCase());
+            }
         }
+
+        // Extract CSS
         if (line.startsWith('##') && !line.includes(':upward') && !line.includes(':xpath')) {
             cssRules.add(line.slice(2));
         }
     }
 
-    // Create an output folder
     if (!fs.existsSync('./public')) fs.mkdirSync('./public');
 
-    fs.writeFileSync('./public/ubo-domains.json', JSON.stringify(Array.from(domains)));
+    const domainArray = Array.from(domains);
+    fs.writeFileSync('./public/ubo-domains.json', JSON.stringify(domainArray));
 
     const cssString = `<style id="ubo-proxy-css">${Array.from(cssRules).join(', ')} { display: none !important; visibility: hidden !important; height: 0 !important; }</style>`;
     fs.writeFileSync('./public/ubo-cosmetic.txt', cssString);
 
-    console.log('Build complete! Files saved in /public');
+    console.log(`Build complete! Extracted ${domainArray.length} domains.`);
 }
 
 compile();
